@@ -1,17 +1,28 @@
-FROM ubuntu:latest AS build
+FROM maven:3.9.0-openjdk-17 AS build
 
-RUN apt-get update
-RUN apt-get install openjdk-17-jdk -y
+WORKDIR /app
 
-COPY . .
+# Copiar pom.xml primeiro para cache de dependências
+COPY pom.xml .
 
-RUN apt-get install maven -y
-RUN mvn clean install
+# Baixar dependências
+RUN mvn dependency:go-offline
+
+# Copiar código fonte
+COPY src ./src
+
+# Construir aplicação (sem testes para ser mais rápido)
+RUN mvn clean package -DskipTests
 
 FROM openjdk:17-jdk-slim
 
-EXPOSE 8080
+WORKDIR /app
 
-COPY --from=build /target/todolist-0.0.1-SNAPSHOT.jar app.jar
+# Porta que o Render espera
+EXPOSE 10000
 
-ENTRYPOINT [ "java", "-jar", "app.jar"]
+# Copiar o JAR construído
+COPY --from=build /app/target/todolist-0.0.1-SNAPSHOT.jar app.jar
+
+# Importante: Usar a variável PORT do Render
+ENTRYPOINT ["java", "-Dserver.port=${PORT:-10000}", "-jar", "app.jar"]
