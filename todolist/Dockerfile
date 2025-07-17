@@ -7,7 +7,7 @@ COPY . .
 
 RUN apt-get install maven -y
 
-RUN mvn clean install
+RUN mvn -f todolist/pom.xml clean install
 
 FROM openjdk:17-jdk-slim
 
